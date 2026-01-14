@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, PackagePlus, LogOut, Menu, PackageSearch } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, PackagePlus, LogOut, Menu, PackageSearch, ShoppingBag } from 'lucide-react';
 
 export const MainLayout = () => {
     const navigate = useNavigate();
@@ -40,6 +40,15 @@ export const MainLayout = () => {
                     >
                         <ShoppingCart size={20} />
                         Nueva Venta
+                    </NavLink>
+                    <NavLink
+                        to="/sales/history"
+                        className={({ isActive }) =>
+                            `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`
+                        }
+                    >
+                        <ShoppingBag size={20} />
+                        Historial Ventas
                     </NavLink>
 
                     <NavLink

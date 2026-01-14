@@ -6,6 +6,7 @@ import { SalesPage } from './features/sales/SalesPage';
 import { InventoryPage } from './features/inventory/InventoryPage';
 import { ProductListPage } from './features/catalog/ProductListPage';
 import { QuotesPage } from './features/sales/QuotesPage';
+import { SalesHistoryPage } from './features/sales/SalesHistoryPage';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
         <Route element={<MainLayout />}>
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/sales" element={<SalesPage />} />
+          <Route path="/sales/history" element={<SalesHistoryPage />} />
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/catalog" element={<ProductListPage />} />
           <Route path="/quotes" element={<QuotesPage />} />

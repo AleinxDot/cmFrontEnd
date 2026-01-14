@@ -5,6 +5,8 @@ import { searchCustomers } from '../customers/customerService';
 import { CreateCustomerModal } from '../customers/CreateCustomerModal';
 import type { CartItem, Product } from './types';
 import type { Customer } from '../customers/types';
+import { Camera } from 'lucide-react';
+import { BarcodeScanner } from '../../components/ui/BarcodeScanner';
 
 
 export const SalesPage = () => {
@@ -19,6 +21,7 @@ export const SalesPage = () => {
     const [cart, setCart] = useState<CartItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [successId, setSuccessId] = useState<string | null>(null);
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
     // Referencia para mantener el foco en el buscador (para escanear seguido)
     const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -137,6 +140,23 @@ export const SalesPage = () => {
         }
     };
 
+    // Función que recibe el código de la cámara
+    const handleScanSuccess = (code: string) => {
+        setIsScannerOpen(false); // Cerramos cámara
+        setSearchTerm(code); // Ponemos el código en el input
+
+        // Disparamos la búsqueda automáticamente (simulamos el Enter)
+        // Reutilizamos tu lógica de búsqueda existente:
+        searchProducts(code).then(results => {
+            if (results.length === 1) {
+                addToCart(results[0]);
+                setSearchTerm(''); // Limpiar si se agregó directo
+            } else {
+                setSearchResults(results);
+            }
+        });
+    };
+
     // Cálculos de Totales
     const totalAmount = cart.reduce((sum, item) => sum + item.subtotal, 0);
 
@@ -165,19 +185,31 @@ export const SalesPage = () => {
             <div className="flex-1 flex flex-col gap-4">
                 <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
                     <label className="text-xs font-bold text-slate-400 uppercase">Buscador / Lector</label>
-                    <div className="relative mt-1">
-                        <Search className="absolute left-3 top-2.5 text-slate-400" size={20} />
-                        <input
-                            ref={searchInputRef}
-                            type="text"
-                            placeholder="Escanea código o escribe nombre..."
-                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-lg"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            onKeyDown={handleSearch}
-                        />
+                    <div className="relative mt-1 flex gap-2"> {/* Agregamos flex y gap */}
+
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-2.5 text-slate-400" size={20} />
+                            <input
+                                ref={searchInputRef}
+                                type="text"
+                                placeholder="Escanea código o escribe nombre..."
+                                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-lg"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onKeyDown={handleSearch}
+                            />
+                        </div>
+
+                        {/* BOTÓN CÁMARA */}
+                        <button
+                            onClick={() => setIsScannerOpen(true)}
+                            className="bg-slate-800 text-white p-3 rounded-lg hover:bg-slate-700 transition shadow-md"
+                            title="Usar Cámara"
+                        >
+                            <Camera size={24} />
+                        </button>
                     </div>
-                    <p className="text-xs text-slate-400 mt-2">Presiona ENTER para buscar o agregar.</p>
+                    <p className="text-xs text-slate-400 mt-2">Presiona ENTER para buscar o usa la cámara.</p>
                 </div>
 
                 {/* Lista de Resultados de Búsqueda */}
@@ -347,6 +379,13 @@ export const SalesPage = () => {
                 <CreateCustomerModal
                     onClose={() => setIsCustomerModalOpen(false)}
                     onSuccess={(newCust) => selectCustomer(newCust)}
+                />
+            )}
+            {/* Renderizado de escáner */}
+            {isScannerOpen && (
+                <BarcodeScanner
+                    onScanSuccess={handleScanSuccess}
+                    onClose={() => setIsScannerOpen(false)}
                 />
             )}
         </div>

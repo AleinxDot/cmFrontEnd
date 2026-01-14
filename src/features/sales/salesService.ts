@@ -59,3 +59,9 @@ export const getSaleDetail = async (id: number) => {
 export const archiveQuote = async (id: number) => {
     return await client.put(`/sales/${id}/archive`);
 };
+
+// Historial
+export const getSalesHistory = async () => {
+    const response = await client.get<any[]>('/sales/history');
+    return response.data;
+};
