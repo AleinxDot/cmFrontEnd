@@ -5,6 +5,7 @@ import { DashboardPage } from './features/dashboard/DashboardPage';
 import { SalesPage } from './features/sales/SalesPage';
 import { InventoryPage } from './features/inventory/InventoryPage';
 import { ProductListPage } from './features/catalog/ProductListPage';
+import { QuotesPage } from './features/sales/QuotesPage';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
           <Route path="/sales" element={<SalesPage />} />
           <Route path="/inventory" element={<InventoryPage />} />
           <Route path="/catalog" element={<ProductListPage />} />
+          <Route path="/quotes" element={<QuotesPage />} />
         </Route>
 
         {/* Redirección por defecto */}

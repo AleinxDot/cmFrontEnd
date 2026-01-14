@@ -58,6 +58,13 @@ export const MainLayout = () => {
                         <PackageSearch size={20} />
                         Catálogo
                     </NavLink>
+                    <NavLink
+                        to="/quotes"
+                        className={({ isActive }) =>
+                            `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}>
+                        <PackageSearch size={20} />
+                        Cotizaciones
+                    </NavLink>
                 </nav>
 
                 {/* Footer del Sidebar */}

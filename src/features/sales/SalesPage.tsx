@@ -1,19 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Trash2, ShoppingCart, Plus, Minus, CreditCard, CheckCircle } from 'lucide-react';
+import { Search, Trash2, ShoppingCart, Plus, Minus, CreditCard, CheckCircle, User, UserPlus, X, FileText } from 'lucide-react';
 import { searchProducts, createSale } from './salesService';
+import { searchCustomers } from '../customers/customerService';
+import { CreateCustomerModal } from '../customers/CreateCustomerModal';
 import type { CartItem, Product } from './types';
+import type { Customer } from '../customers/types';
+
 
 export const SalesPage = () => {
     // Estados
+    const [docType, setDocType] = useState<'BOLETA' | 'FACTURA' | 'COTIZACION'>('BOLETA');
+    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+    const [customerQuery, setCustomerQuery] = useState('');
+    const [customerResults, setCustomerResults] = useState<Customer[]>([]);
+    const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState<Product[]>([]);
     const [cart, setCart] = useState<CartItem[]>([]);
-    const [docType, setDocType] = useState<'BOLETA' | 'FACTURA'>('BOLETA');
     const [loading, setLoading] = useState(false);
     const [successId, setSuccessId] = useState<string | null>(null);
-
     // Referencia para mantener el foco en el buscador (para escanear seguido)
     const searchInputRef = useRef<HTMLInputElement>(null);
+
 
     // Enfocar el input al cargar la página
     useEffect(() => {
@@ -77,24 +85,53 @@ export const SalesPage = () => {
         }
     };
 
+    // --- LÓGICA DE BÚSQUEDA DE CLIENTES ---
+
+    const handleSearchCustomer = async (val: string) => {
+        setCustomerQuery(val);
+        if (val.length > 2) {
+            const results = await searchCustomers(val);
+            setCustomerResults(results);
+        } else {
+            setCustomerResults([]);
+        }
+    };
+    const selectCustomer = (cust: Customer) => {
+        setSelectedCustomer(cust);
+        setCustomerQuery(''); // Limpiar busqueda
+        setCustomerResults([]); // Ocultar lista
+    };
+
+    const clearCustomer = () => {
+        setSelectedCustomer(null);
+        setCustomerQuery('');
+    };
+
     // --- LÓGICA DE VENTA ---
 
     const handleFinalizeSale = async () => {
         if (cart.length === 0) return;
-        setLoading(true);
 
+        // Validación: Si es FACTURA, obligar a seleccionar cliente
+        if (docType === 'FACTURA' && !selectedCustomer) {
+            alert("Para emitir FACTURA debe seleccionar un cliente con RUC.");
+            return;
+        }
+
+        setLoading(true);
         try {
             const saleData = {
-                clientId: null, // Por ahora nulo (Público General)
+                clientId: selectedCustomer ? selectedCustomer.id : null, // <--- AQUI USAMOS EL ID
                 type: docType,
                 items: cart.map(item => ({ productId: item.id, quantity: item.quantity }))
             };
 
             const response = await createSale(saleData);
             setSuccessId(response.documentNumber || "Registrado");
-            setCart([]); // Limpiar carrito
+            setCart([]);
+            setSelectedCustomer(null); // Resetear cliente
         } catch (error) {
-            alert("Error al procesar venta. Verifique el stock.");
+            alert("Error al procesar venta.");
         } finally {
             setLoading(false);
         }
@@ -171,17 +208,53 @@ export const SalesPage = () => {
             {/* COLUMNA DERECHA: CARRITO Y PAGO */}
             <div className="w-full md:w-[400px] bg-white rounded-xl shadow-lg border border-slate-200 flex flex-col">
                 {/* Cabecera del Ticket */}
-                <div className="p-5 border-b border-slate-100 bg-slate-50 rounded-t-xl">
-                    <div className="flex justify-between items-center mb-4">
-                        <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                            <ShoppingCart size={20} /> Carrito de Venta
-                        </h2>
-                        <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-bold">
-                            {cart.length} Items
-                        </span>
+                <div className="p-4 bg-slate-800 text-white rounded-t-xl">
+                    <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-bold text-slate-400 uppercase">Cliente</span>
+                        {!selectedCustomer && (
+                            <button onClick={() => setIsCustomerModalOpen(true)} className="text-xs bg-blue-600 hover:bg-blue-500 px-2 py-1 rounded flex items-center gap-1">
+                                <UserPlus size={14} /> Nuevo
+                            </button>
+                        )}
                     </div>
 
-                    {/* Selector Boleta/Factura */}
+                    {selectedCustomer ? (
+                        <div className="flex justify-between items-center bg-slate-700 p-2 rounded border border-slate-600">
+                            <div>
+                                <p className="font-bold text-sm text-white">{selectedCustomer.name}</p>
+                                <p className="text-xs text-slate-400">{selectedCustomer.docNumber}</p>
+                            </div>
+                            <button onClick={clearCustomer} className="text-red-400 hover:text-red-300">
+                                <X size={18} />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="relative">
+                            <User className="absolute left-3 top-2.5 text-slate-400" size={18} />
+                            <input
+                                type="text"
+                                placeholder="Buscar Cliente (DNI/Nombre)..."
+                                className="w-full pl-10 p-2 rounded text-slate-900 text-sm outline-none"
+                                value={customerQuery}
+                                onChange={e => handleSearchCustomer(e.target.value)}
+                            />
+                            {/* Lista desplegable de clientes */}
+                            {customerResults.length > 0 && (
+                                <div className="absolute top-10 left-0 w-full bg-white text-slate-900 rounded shadow-xl border border-slate-200 z-10 max-h-40 overflow-auto">
+                                    {customerResults.map(c => (
+                                        <div key={c.id} onClick={() => selectCustomer(c)} className="p-2 hover:bg-blue-50 cursor-pointer text-sm border-b">
+                                            <p className="font-bold">{c.name}</p>
+                                            <p className="text-xs text-slate-500">{c.docNumber}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* 2. CABECERA TICKET (MODIFICADA: Ya no es rounded-t, ahora es cuadrada arriba) */}
+                <div className="p-4 border-b border-slate-100 bg-slate-50">
                     <div className="flex bg-white p-1 rounded-lg border border-slate-200">
                         <button
                             onClick={() => setDocType('BOLETA')}
@@ -194,6 +267,12 @@ export const SalesPage = () => {
                             className={`flex-1 py-1 text-sm font-medium rounded-md transition ${docType === 'FACTURA' ? 'bg-blue-600 text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}
                         >
                             FACTURA
+                        </button>
+                        <button
+                            onClick={() => setDocType('COTIZACION')}
+                            className={`flex-1 py-1 text-sm font-medium rounded-md transition ${docType === 'COTIZACION' ? 'bg-purple-600 text-white shadow' : 'text-slate-500 hover:bg-slate-50'}`}
+                        >
+                            COTIZACIÓN
                         </button>
                     </div>
                 </div>
@@ -250,18 +329,26 @@ export const SalesPage = () => {
                         onClick={handleFinalizeSale}
                         disabled={cart.length === 0 || loading}
                         className={`w-full py-3 px-4 rounded-xl flex items-center justify-center gap-2 font-bold text-white shadow-lg transition transform active:scale-95
-                            ${cart.length === 0 || loading ? 'bg-slate-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}
+                            ${cart.length === 0 || loading ? 'bg-slate-400 cursor-not-allowed' :
+                                docType === 'COTIZACION' ? 'bg-purple-600 hover:bg-purple-700' : 'bg-green-600 hover:bg-green-700'}
                         `}
                     >
                         {loading ? 'Procesando...' : (
                             <>
-                                <CreditCard size={20} />
-                                CONFIRMAR VENTA
+                                {docType === 'COTIZACION' ? <FileText size={20} /> : <CreditCard size={20} />}
+                                {docType === 'COTIZACION' ? ' GUARDAR COTIZACIÓN' : ' CONFIRMAR VENTA'}
                             </>
                         )}
                     </button>
                 </div>
             </div>
+            {/* Modal de nuevo cliente */}
+            {isCustomerModalOpen && (
+                <CreateCustomerModal
+                    onClose={() => setIsCustomerModalOpen(false)}
+                    onSuccess={(newCust) => selectCustomer(newCust)}
+                />
+            )}
         </div>
     );
 };
