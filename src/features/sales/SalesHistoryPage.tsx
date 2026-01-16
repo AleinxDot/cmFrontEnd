@@ -74,7 +74,7 @@ export const SalesHistoryPage = () => {
             </div>
 
             {loading ? <div className="text-center p-10">Cargando ventas...</div> : (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden overflow-x-auto">
                     <table className="w-full text-left">
                         <thead className="bg-slate-50 text-slate-700 font-semibold border-b">
                             <tr>

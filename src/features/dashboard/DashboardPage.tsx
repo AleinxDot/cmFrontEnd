@@ -71,7 +71,7 @@ export const DashboardPage = () => {
 
             {/* Tabla de Alertas de Stock */}
             {stats.lowStockCount > 0 && (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden overflow-x-auto">
                     <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-red-50">
                         <h3 className="font-semibold text-red-700 flex items-center gap-2">
                             <AlertTriangle size={18} /> Productos que requieren reposición

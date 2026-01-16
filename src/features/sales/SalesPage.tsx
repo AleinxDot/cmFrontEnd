@@ -179,7 +179,7 @@ export const SalesPage = () => {
     }
 
     return (
-        <div className="flex flex-col md:flex-row h-[calc(100vh-100px)] gap-6">
+        <div className="flex flex-col md:flex-row md:h-[calc(100vh-100px)] h-auto gap-6">
 
             {/* COLUMNA IZQUIERDA: BUSCADOR Y RESULTADOS */}
             <div className="flex-1 flex flex-col gap-4">
