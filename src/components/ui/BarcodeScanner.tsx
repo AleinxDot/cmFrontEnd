@@ -87,6 +87,7 @@ export const BarcodeScanner = ({ onScanSuccess, onClose }: Props) => {
                 onScanSuccess(decodedText);
             },
             (errorMessage) => {
+                console.error("Error al escanear", errorMessage);
             }
         ).catch((err) => {
             console.error("Error al iniciar scanner", err);

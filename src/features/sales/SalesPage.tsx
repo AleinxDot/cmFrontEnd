@@ -1,11 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Trash2, ShoppingCart, Plus, Minus, CreditCard, CheckCircle, User, UserPlus, X, FileText } from 'lucide-react';
+import { Search, Trash2, ShoppingCart, Plus, Minus, CreditCard, CheckCircle, User, UserPlus, X, FileText, ScanLine } from 'lucide-react';
 import { searchProducts, createSale } from './salesService';
 import { searchCustomers } from '../customers/customerService';
 import { CreateCustomerModal } from '../customers/CreateCustomerModal';
 import type { CartItem, Product } from './types';
 import type { Customer } from '../customers/types';
-import { Camera } from 'lucide-react';
 import { BarcodeScanner } from '../../components/ui/BarcodeScanner';
 
 
@@ -206,7 +205,7 @@ export const SalesPage = () => {
                             className="bg-slate-800 text-white p-3 rounded-lg hover:bg-slate-700 transition shadow-md"
                             title="Usar Cámara"
                         >
-                            <Camera size={24} />
+                            <ScanLine size={24} />
                         </button>
                     </div>
                     <p className="text-xs text-slate-400 mt-2">Presiona ENTER para buscar o usa la cámara.</p>

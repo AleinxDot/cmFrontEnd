@@ -19,16 +19,16 @@ export const updateProduct = async (id: number, product: ProductPayload) => {
     return (await client.put(`/catalog/products/${id}`, product)).data;
 };
 export const toggleProductArchive = async (id: number) => {
-    return await client.put(`/catalog/products/${id}/archive`);
+    return await client.put(`/products/${id}/archive`);
 };
 export const getProductsList = async (
     search: string,
-    status: string,
+    isActive: boolean,
     page: number = 0,
     size: number = 20,
     sort: string = 'id,desc'
 ) => {
-    const url = `/products?search=${search}&status=${status}&page=${page}&size=${size}&sort=${sort}`;
+    const url = `/products?search=${search}&isActive=${isActive}&page=${page}&size=${size}&sort=${sort}`;
     const response = await client.get(url);
     return response.data;
 };

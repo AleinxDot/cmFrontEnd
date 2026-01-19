@@ -1,6 +1,6 @@
 import client from '../../api/client';
 import type { Product, SaleRequest } from './types';
-import type { Quote, SaleDetail } from './types'; // Importa los tipos
+import type { SaleDetail } from './types'; // Importa los tipos
 
 
 // Buscar productos (por nombre o código de barras)

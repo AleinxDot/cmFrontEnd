@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { X, Plus, Save } from 'lucide-react';
-import { getBrands, getCategories, createBrand, createProduct, createCategory, updateProduct } from './catalogService'; import type { DropdownItem, ProductPayload } from './types';
+import { X, Plus, Save, Camera } from 'lucide-react'; // <--- Agregamos 'Camera'
+import { getBrands, getCategories, createBrand, createProduct, createCategory, updateProduct } from './catalogService';
+import type { DropdownItem, ProductPayload } from './types';
+import { BarcodeScanner } from '../../components/ui/BarcodeScanner'; // <--- Importamos el Escáner
 
 interface Props {
     onClose: () => void;
@@ -24,9 +26,11 @@ export const CreateProductModal = ({ onClose, onSuccess, productToEdit }: Props)
     const [showCategoryInput, setShowCategoryInput] = useState(false);
     const [newCategoryName, setNewCategoryName] = useState('');
 
+    // Estado para el Escáner
+    const [isScannerOpen, setIsScannerOpen] = useState(false); // <--- Nuevo Estado
+
     useEffect(() => {
         loadMetadata();
-        // SI HAY PRODUCTO A EDITAR, LLENAMOS EL FORMULARIO
         if (productToEdit) {
             setForm({
                 barcode: productToEdit.barcode,
@@ -45,7 +49,6 @@ export const CreateProductModal = ({ onClose, onSuccess, productToEdit }: Props)
         setCategories(c);
     };
 
-    // Guardar Marca
     const handleSaveBrand = async () => {
         if (!newBrandName) return;
         const newBrand = await createBrand(newBrandName);
@@ -55,39 +58,44 @@ export const CreateProductModal = ({ onClose, onSuccess, productToEdit }: Props)
         setNewBrandName('');
     };
 
-    // Guardar Categoría (NUEVO)
     const handleSaveCategory = async () => {
         if (!newCategoryName) return;
         const newCat = await createCategory(newCategoryName);
-        setCategories([...categories, newCat]); // Actualizamos lista local
-        setForm(prev => ({ ...prev, categoryId: newCat.id })); // Seleccionamos la nueva
+        setCategories([...categories, newCat]);
+        setForm(prev => ({ ...prev, categoryId: newCat.id }));
         setShowCategoryInput(false);
         setNewCategoryName('');
+    };
+
+    // Función que recibe el código escaneado
+    const handleScan = (code: string) => {
+        setForm(prev => ({ ...prev, barcode: code })); // Rellena el input
+        setIsScannerOpen(false); // Cierra el escáner
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
             if (productToEdit) {
-                // MODO EDICIÓN
                 await updateProduct(productToEdit.id, form);
                 alert("Producto actualizado correctamente");
             } else {
-                // MODO CREACIÓN
                 await createProduct(form);
                 alert("Producto creado exitosamente");
             }
             onSuccess();
             onClose();
         } catch (error) {
-            alert("Error al guardar producto");
+            alert("Error al guardar producto (Verifica que el código no exista ya)");
         }
     };
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden relative">
+
                 <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
-                    <h2 className="font-bold">Nuevo Producto</h2>
+                    <h2 className="font-bold">{productToEdit ? 'Editar Producto' : 'Nuevo Producto'}</h2>
                     <button onClick={onClose}><X size={20} /></button>
                 </div>
 
@@ -96,8 +104,25 @@ export const CreateProductModal = ({ onClose, onSuccess, productToEdit }: Props)
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="text-xs font-bold text-slate-500">Código Barras</label>
-                            <input required type="text" className="w-full p-2 border rounded"
-                                value={form.barcode} onChange={e => setForm({ ...form, barcode: e.target.value })} />
+                            <div className="flex gap-2">
+                                <input
+                                    required
+                                    type="text"
+                                    className="w-full p-2 border rounded"
+                                    value={form.barcode}
+                                    onChange={e => setForm({ ...form, barcode: e.target.value })}
+                                    placeholder="Escanear o escribir..."
+                                />
+                                {/* BOTÓN DE ESCÁNER */}
+                                <button
+                                    type="button"
+                                    onClick={() => setIsScannerOpen(true)}
+                                    className="bg-slate-200 text-slate-700 p-2 rounded hover:bg-slate-300 transition"
+                                    title="Escanear Código"
+                                >
+                                    <Camera size={20} />
+                                </button>
+                            </div>
                         </div>
                         <div>
                             <label className="text-xs font-bold text-slate-500">Nombre</label>
@@ -132,7 +157,7 @@ export const CreateProductModal = ({ onClose, onSuccess, productToEdit }: Props)
                         )}
                     </div>
 
-
+                    {/* SECCIÓN CATEGORÍA */}
                     <div>
                         <label className="text-xs font-bold text-slate-500 flex justify-between">
                             Categoría
@@ -179,6 +204,14 @@ export const CreateProductModal = ({ onClose, onSuccess, productToEdit }: Props)
                     </div>
                 </form>
             </div>
+
+            {/* Renderizado condicional del Escáner */}
+            {isScannerOpen && (
+                <BarcodeScanner
+                    onScanSuccess={handleScan}
+                    onClose={() => setIsScannerOpen(false)}
+                />
+            )}
         </div>
     );
 };

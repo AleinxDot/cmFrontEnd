@@ -29,9 +29,11 @@ client.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-            // Se puede forzar un logout o limpiar el token
-            // localStorage.removeItem('token');
-            // window.location.href = '/login';
+            // Limpiar el token y redirigir al login
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('role');
+            window.location.href = '/login';
             console.error("Sesión expirada o inválida");
         }
         return Promise.reject(error);

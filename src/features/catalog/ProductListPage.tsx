@@ -1,7 +1,9 @@
+// src/features/catalog/ProductListPage.tsx
 import { useState, useEffect, useRef } from 'react';
 import {
-    PackageSearch, Plus, Edit, Archive, RefreshCcw, Search, Camera,
-    ArrowUpDown, ArrowUp, ArrowDown, Download
+    PackageSearch, Plus, Edit, Archive, RefreshCcw, Search, ArrowUpDown,
+    ArrowUp, ArrowDown, ChevronLeft, ChevronRight,
+    ScanLine
 } from 'lucide-react';
 import { getProductsList, toggleProductArchive } from './catalogService';
 import { CreateProductModal } from './CreateProductModal';
@@ -16,9 +18,11 @@ export const ProductListPage = () => {
     const [search, setSearch] = useState('');
     const [showArchived, setShowArchived] = useState(false);
 
-    // Paginación y Orden
+    // Paginación y Totales
     const [page, setPage] = useState(0);
-    const [isLastPage, setIsLastPage] = useState(false); // Para ocultar botón "Cargar más"
+    const [pageSize, setPageSize] = useState(10);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0); // Contador total
     const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'desc' });
 
     // UI
@@ -26,58 +30,46 @@ export const ProductListPage = () => {
     const [editingProduct, setEditingProduct] = useState<any | null>(null);
     const [isScannerOpen, setIsScannerOpen] = useState(false);
 
-    // Referencia para evitar dobles llamadas en StrictMode
     const isFirstRender = useRef(true);
 
-    // 1. EFECTO: Reseteo al cambiar filtros (Busqueda, Archivo, Orden)
+    // Reseteo al cambiar filtros
     useEffect(() => {
-        // Si no es el primer render, reseteamos la lista para buscar de nuevo
         if (isFirstRender.current) {
             isFirstRender.current = false;
-            loadProducts(0, true); // Carga inicial
+            loadProducts(0);
             return;
         }
-
-        // Delay para no saturar mientras escribes (Debounce)
         const timer = setTimeout(() => {
-            setPage(0); // Volvemos a página 0
-            loadProducts(0, true); // true = Reemplazar lista (reset)
+            setPage(0);
+            loadProducts(0);
         }, 300);
-
         return () => clearTimeout(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [search, showArchived, sortConfig]);
+    }, [search, showArchived, sortConfig, pageSize]);
 
-    // 2. EFECTO: Cargar más páginas (Solo cuando cambia 'page' y es > 0)
+    // Cambio de página
     useEffect(() => {
-        if (page > 0) {
-            loadProducts(page, false); // false = Agregar a la lista (append)
+        if (!isFirstRender.current) {
+            loadProducts(page);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [page]);
 
-    const loadProducts = async (currentPage: number, shouldReset: boolean) => {
+    const loadProducts = async (currentPage: number) => {
         setLoading(true);
-        const status = showArchived ? 'ARCHIVED' : 'ACTIVE';
+        // Convertimos el checkbox a booleano para 'isActive'
+        // Si quiero ver archivados (showArchived=true), entonces isActive debe ser false.
+        const isActive = !showArchived;
+
         const sortParam = `${sortConfig.key},${sortConfig.direction}`;
 
         try {
-            // Tamaño fijo de 20 para cargar rápido
-            const data = await getProductsList(search, status, currentPage, 20, sortParam);
+            const data = await getProductsList(search, isActive, currentPage, pageSize, sortParam);
 
-            if (shouldReset) {
-                setProducts(data.content || []); // Reemplazar todo
-            } else {
-                // Filtrar duplicados por seguridad (a veces React renderiza doble)
-                setProducts(prev => {
-                    const newItems = data.content || [];
-                    const existingIds = new Set(prev.map(p => p.id));
-                    const uniqueNewItems = newItems.filter((p: any) => !existingIds.has(p.id));
-                    return [...prev, ...uniqueNewItems];
-                });
-            }
+            setProducts(data.content || []);
+            setTotalPages(data.totalPages);
+            setTotalElements(data.totalElements); // Guardamos el total real de la BD
 
-            setIsLastPage(data.last); // ¿Es la última página?
         } catch (error) {
             console.error("Error cargando productos", error);
         } finally {
@@ -85,14 +77,12 @@ export const ProductListPage = () => {
         }
     };
 
-    // Manejar Ordenamiento
     const handleSort = (key: string) => {
         let direction = 'asc';
         if (sortConfig.key === key && sortConfig.direction === 'asc') {
             direction = 'desc';
         }
         setSortConfig({ key, direction });
-        // El useEffect detectará el cambio y recargará
     };
 
     const getSortIcon = (columnKey: string) => {
@@ -112,55 +102,55 @@ export const ProductListPage = () => {
         if (!confirm(`¿Seguro que deseas ${action} el producto "${product.name}"?`)) return;
         try {
             await toggleProductArchive(product.id);
-            // Recargamos solo la página actual para refrescar estado
-            setPage(0);
-            loadProducts(0, true);
+            loadProducts(page); // Recargar página actual
         } catch (error) {
             alert("Error al actualizar estado");
         }
     };
 
     return (
-        <div className="max-w-7xl mx-auto p-4 md:p-6">
+        <div className="max-w-7xl mx-auto p-4 md:p-6 flex flex-col h-full">
 
             {/* CABECERA */}
             <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-                    <PackageSearch className="text-purple-600" /> Catálogo
-                    <span className="text-sm font-normal text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
-                        {products.length} ítems visibles
+                <div className="flex items-center gap-3">
+                    <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+                        <PackageSearch className="text-purple-600" /> Catálogo
+                    </h1>
+                    {/* Contador dinámico */}
+                    <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold border border-purple-200">
+                        {totalElements} Productos
                     </span>
-                </h1>
+                </div>
 
                 <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
-                    <label className="flex items-center gap-2 cursor-pointer select-none text-sm font-medium text-slate-600">
+                    <label className="flex items-center gap-2 cursor-pointer select-none text-sm font-medium text-slate-600 hover:text-purple-700 transition">
                         <input
                             type="checkbox"
                             checked={showArchived}
                             onChange={e => setShowArchived(e.target.checked)}
-                            className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500"
+                            className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 cursor-pointer"
                         />
-                        <span className="hidden md:inline">Mostrar Archivados</span>
-                        <span className="md:hidden">Archivados</span>
+                        <span>Ver Archivados</span>
                     </label>
 
                     <button
                         onClick={() => { setEditingProduct(null); setIsModalOpen(true); }}
-                        className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow"
+                        className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow transition"
                     >
-                        <Plus size={20} /> <span className="hidden md:inline">Nuevo</span><span className="md:hidden">Crear</span>
+                        <Plus size={20} /> <span className="hidden md:inline">Nuevo</span>
                     </button>
                 </div>
             </div>
 
             {/* BUSCADOR */}
-            <div className="flex gap-2 mb-4 sticky top-0 z-10 bg-gray-50 pb-2">
+            <div className="flex gap-2 mb-4">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-3 text-slate-400" size={20} />
                     <input
                         type="text"
                         placeholder="Buscar por código, nombre, marca..."
-                        className="w-full pl-10 p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 shadow-sm"
+                        className="w-full pl-10 p-3 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 shadow-sm transition"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
@@ -171,13 +161,14 @@ export const ProductListPage = () => {
                 <button
                     onClick={() => setIsScannerOpen(true)}
                     className="bg-slate-800 text-white p-3 rounded-lg hover:bg-slate-700 transition shadow-sm"
+                    title="Escanear código de barras"
                 >
-                    <Camera size={24} />
+                    <ScanLine size={24} />
                 </button>
             </div>
 
-            {/* TABLA CON SCROLL */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
+            {/* TABLA */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col mb-4">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left min-w-[900px]">
                         <thead className="bg-slate-50 text-slate-700 font-semibold border-b text-sm uppercase">
@@ -188,14 +179,14 @@ export const ProductListPage = () => {
                                 <th onClick={() => handleSort('name')} className="p-4 cursor-pointer hover:bg-slate-100 select-none">
                                     <div className="flex items-center gap-1">Producto {getSortIcon('name')}</div>
                                 </th>
-                                <th onClick={() => handleSort('brand.name')} className="p-4 cursor-pointer hover:bg-slate-100 select-none">
-                                    <div className="flex items-center gap-1">Marca {getSortIcon('brand.name')}</div>
+                                <th onClick={() => handleSort('brand')} className="p-4 cursor-pointer hover:bg-slate-100 select-none">
+                                    <div className="flex items-center gap-1">Marca {getSortIcon('brand')}</div>
                                 </th>
-                                <th onClick={() => handleSort('category.name')} className="p-4 cursor-pointer hover:bg-slate-100 select-none">
-                                    <div className="flex items-center gap-1">Categoría {getSortIcon('category.name')}</div>
+                                <th onClick={() => handleSort('category')} className="p-4 cursor-pointer hover:bg-slate-100 select-none">
+                                    <div className="flex items-center gap-1">Categoría {getSortIcon('category')}</div>
                                 </th>
-                                <th onClick={() => handleSort('unitPrice')} className="p-4 text-right cursor-pointer hover:bg-slate-100 select-none">
-                                    <div className="flex items-center justify-end gap-1">Precio {getSortIcon('unitPrice')}</div>
+                                <th onClick={() => handleSort('price')} className="p-4 text-right cursor-pointer hover:bg-slate-100 select-none">
+                                    <div className="flex items-center justify-end gap-1">Precio {getSortIcon('price')}</div>
                                 </th>
                                 <th onClick={() => handleSort('stock')} className="p-4 text-center cursor-pointer hover:bg-slate-100 select-none">
                                     <div className="flex items-center justify-center gap-1">Stock {getSortIcon('stock')}</div>
@@ -208,7 +199,7 @@ export const ProductListPage = () => {
                                 <tr><td colSpan={7} className="p-10 text-center text-slate-400">No se encontraron productos.</td></tr>
                             ) : (
                                 products.map(p => (
-                                    <tr key={p.id} className={`hover:bg-slate-50 transition ${showArchived ? 'opacity-75 bg-slate-50' : ''}`}>
+                                    <tr key={p.id} className={`hover:bg-slate-50 transition ${showArchived ? 'bg-slate-50' : ''}`}>
                                         <td className="p-4 font-mono text-xs text-slate-500">{p.barcode}</td>
                                         <td className="p-4 font-medium text-slate-800">{p.name}</td>
                                         <td className="p-4 text-slate-600 text-sm">{p.brandName}</td>
@@ -221,9 +212,15 @@ export const ProductListPage = () => {
                                         </td>
                                         <td className="p-4 flex justify-center gap-2">
                                             {!showArchived && (
-                                                <button onClick={() => { setEditingProduct(p); setIsModalOpen(true); }} className="p-2 text-slate-500 hover:text-blue-600 transition"><Edit size={18} /></button>
+                                                <button onClick={() => { setEditingProduct(p); setIsModalOpen(true); }} className="p-2 text-slate-500 hover:text-blue-600 transition" title="Editar">
+                                                    <Edit size={18} />
+                                                </button>
                                             )}
-                                            <button onClick={() => handleArchiveToggle(p)} className={`p-2 transition ${showArchived ? 'text-green-500' : 'text-slate-400 hover:text-red-500'}`}>
+                                            <button
+                                                onClick={() => handleArchiveToggle(p)}
+                                                className={`p-2 transition ${showArchived ? 'text-green-600 hover:bg-green-50' : 'text-slate-400 hover:text-red-500 hover:bg-red-50'} rounded`}
+                                                title={showArchived ? "Restaurar" : "Archivar"}
+                                            >
                                                 {showArchived ? <RefreshCcw size={18} /> : <Archive size={18} />}
                                             </button>
                                         </td>
@@ -233,27 +230,55 @@ export const ProductListPage = () => {
                         </tbody>
                     </table>
                 </div>
-
-                {/* BOTÓN CARGAR MÁS */}
-                {!isLastPage && (
-                    <div className="p-4 border-t border-slate-100 text-center bg-slate-50">
-                        <button
-                            onClick={() => setPage(prev => prev + 1)}
-                            disabled={loading}
-                            className="bg-white border border-slate-300 text-slate-700 px-6 py-2 rounded-full font-medium shadow-sm hover:bg-slate-50 hover:border-slate-400 disabled:opacity-50 transition flex items-center gap-2 mx-auto"
-                        >
-                            {loading ? 'Cargando...' : (
-                                <>
-                                    <Download size={16} /> Cargar más productos
-                                </>
-                            )}
-                        </button>
+                {loading && (
+                    <div className="p-4 text-center text-sm text-slate-500 bg-slate-50 animate-pulse">
+                        Cargando datos...
                     </div>
                 )}
             </div>
 
+            {/* CONTROLES DE PAGINACIÓN */}
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-slate-600">
+                <div className="flex items-center gap-2">
+                    <span>Mostrar</span>
+                    <select
+                        value={pageSize}
+                        onChange={(e) => setPageSize(Number(e.target.value))}
+                        className="border border-slate-300 rounded p-1 bg-white focus:ring-2 focus:ring-purple-500 outline-none cursor-pointer"
+                    >
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                    </select>
+                    <span>por página</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <span className="mr-2">
+                        Página <b>{page + 1}</b> de <b>{totalPages || 1}</b>
+                    </span>
+
+                    <button
+                        onClick={() => setPage(p => Math.max(0, p - 1))}
+                        disabled={page === 0 || loading}
+                        className="p-2 border border-slate-300 rounded hover:bg-white disabled:opacity-50 disabled:hover:bg-transparent bg-slate-50 transition"
+                    >
+                        <ChevronLeft size={16} />
+                    </button>
+
+                    <button
+                        onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                        disabled={page >= totalPages - 1 || loading}
+                        className="p-2 border border-slate-300 rounded hover:bg-white disabled:opacity-50 disabled:hover:bg-transparent bg-slate-50 transition"
+                    >
+                        <ChevronRight size={16} />
+                    </button>
+                </div>
+            </div>
+
             {/* MODALES */}
-            {isModalOpen && <CreateProductModal onClose={() => setIsModalOpen(false)} onSuccess={() => { setPage(0); loadProducts(0, true); }} productToEdit={editingProduct} />}
+            {isModalOpen && <CreateProductModal onClose={() => setIsModalOpen(false)} onSuccess={() => loadProducts(page)} productToEdit={editingProduct} />}
             {isScannerOpen && <BarcodeScanner onScanSuccess={handleScan} onClose={() => setIsScannerOpen(false)} />}
         </div>
     );
