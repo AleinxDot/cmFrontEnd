@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Plus, Save, Search, Trash2, PackagePlus, FileText } from 'lucide-react';
+import { Plus, Save, Search, Trash2, PackagePlus, FileText, Camera } from 'lucide-react'; // 1. Importamos Camera
 import { searchProducts, createStockEntry } from './inventoryService';
 import type { StockEntryItem } from './types';
+import { BarcodeScanner } from '../../components/ui/BarcodeScanner'; // 2. Importamos el Escáner
 
 export const InventoryPage = () => {
     // Estado del Formulario Cabecera
@@ -21,6 +22,9 @@ export const InventoryPage = () => {
     const [items, setItems] = useState<StockEntryItem[]>([]);
     const [loading, setLoading] = useState(false);
 
+    // Estado para el Escáner
+    const [isScannerOpen, setIsScannerOpen] = useState(false); // 3. Nuevo estado
+
     // --- MANEJADORES ---
 
     const handleSearch = async (val: string) => {
@@ -30,6 +34,36 @@ export const InventoryPage = () => {
             setSearchResults(results);
         } else {
             setSearchResults([]);
+        }
+    };
+
+    // 4. Nueva función para manejar el escaneo
+    const handleScan = async (code: string) => {
+        setIsScannerOpen(false); // Cerrar cámara
+        setSearchTerm(code);
+
+        try {
+            // Buscar inmediatamente el producto escaneado
+            const results = await searchProducts(code);
+
+            // Lógica de auto-selección
+            if (results && results.length > 0) {
+                // Prioridad: Coincidencia exacta de código de barras
+                const exactMatch = results.find((p: any) => p.barcode === code);
+
+                if (exactMatch) {
+                    selectProduct(exactMatch); // Seleccionar automáticamente
+                } else if (results.length === 1) {
+                    selectProduct(results[0]); // Si solo hay uno, seleccionarlo
+                } else {
+                    setSearchResults(results); // Si hay varios parecidos, mostrar lista
+                }
+            } else {
+                alert("Producto no encontrado en el catálogo");
+                setSearchResults([]);
+            }
+        } catch (error) {
+            console.error("Error buscando producto escaneado", error);
         }
     };
 
@@ -127,20 +161,32 @@ export const InventoryPage = () => {
 
                 <div className="flex flex-col md:flex-row gap-4 items-end">
 
-                    {/* Buscador */}
+                    {/* Buscador con Botón de Escáner */}
                     <div className="flex-1 relative">
                         <label className="text-xs font-bold text-slate-500">Buscar Producto</label>
-                        <div className="relative">
-                            <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
-                            <input
-                                type="text"
-                                placeholder="Escribe nombre o código..."
-                                className="pl-10 w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                value={searchTerm}
-                                onChange={e => handleSearch(e.target.value)}
-                                disabled={selectedProduct !== null} // Bloquear si ya seleccionó uno
-                            />
+                        <div className="flex gap-2"> {/* Contenedor Flex para Input y Botón */}
+                            <div className="relative flex-1">
+                                <Search className="absolute left-3 top-2.5 text-slate-400" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder="Escribe nombre o código..."
+                                    className="pl-10 w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={searchTerm}
+                                    onChange={e => handleSearch(e.target.value)}
+                                    disabled={selectedProduct !== null}
+                                />
+                            </div>
+                            {/* Botón Escáner */}
+                            <button
+                                onClick={() => setIsScannerOpen(true)}
+                                className="bg-slate-800 text-white p-2 rounded-lg hover:bg-slate-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Escanear código de barras"
+                                disabled={selectedProduct !== null}
+                            >
+                                <Camera size={24} />
+                            </button>
                         </div>
+
                         {/* Dropdown de Resultados */}
                         {searchResults.length > 0 && (
                             <div className="absolute z-10 w-full bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-auto">
@@ -273,6 +319,14 @@ export const InventoryPage = () => {
                     )}
                 </button>
             </div>
+
+            {/* 5. Renderizado del Componente Escáner */}
+            {isScannerOpen && (
+                <BarcodeScanner
+                    onScanSuccess={handleScan}
+                    onClose={() => setIsScannerOpen(false)}
+                />
+            )}
         </div>
     );
 };
