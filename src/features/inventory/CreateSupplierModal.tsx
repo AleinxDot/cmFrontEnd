@@ -1,59 +1,46 @@
-import React, { useEffect, useState } from 'react';
-import { X, Save, User, Search, Loader2 } from 'lucide-react'; // Importar Loader2 y Search
-import { createCustomer, updateCustomer, consultExternalCustomer } from './customerService';
+import React, { useState } from 'react';
+import { X, Save, Truck, Search, Loader2 } from 'lucide-react';
+import { createSupplier, consultExternalSupplier } from './supplierService';
 
 interface Props {
     onClose: () => void;
-    onSuccess: (customer: any) => void;
-    customerToEdit?: any | null;
+    onSuccess: (newSupplier: any) => void;
 }
 
-export const CreateCustomerModal = ({ onClose, onSuccess, customerToEdit }: Props) => {
+export const CreateSupplierModal = ({ onClose, onSuccess }: Props) => {
     const [formData, setFormData] = useState({
-        docNumber: '',
+        ruc: '',
         name: '',
         address: '',
         phone: '',
         email: ''
     });
     const [loading, setLoading] = useState(false);
-    const [searching, setSearching] = useState(false); // Estado para el loading de búsqueda
+    const [searching, setSearching] = useState(false);
 
-    useEffect(() => {
-        if (customerToEdit) {
-            setFormData({
-                docNumber: customerToEdit.docNumber || '',
-                name: customerToEdit.name || '',
-                address: customerToEdit.address || '',
-                phone: customerToEdit.phone || '',
-                email: customerToEdit.email || ''
-            });
-        }
-    }, [customerToEdit]);
-
-    // --- FUNCIÓN DE BÚSQUEDA ---
+    // BÚSQUEDA API
     const handleSearchDoc = async () => {
-        if (!formData.docNumber || formData.docNumber.length < 8) {
-            alert("Ingresa un número de documento válido (8 u 11 dígitos)");
+        if (!formData.ruc || formData.ruc.length < 8) {
+            alert("Ingresa un RUC válido");
             return;
         }
 
         setSearching(true);
         try {
-            const data = await consultExternalCustomer(formData.docNumber);
+            const data = await consultExternalSupplier(formData.ruc);
 
-            // El backend nos devuelve campos normalizados, así que esto funciona para ambos casos
             if (data.status && data.status !== 'ACTIVO') {
-                alert(`⚠️ ATENCIÓN: El contribuyente figura como ${data.status}`);
+                alert(`⚠️ Proveedor en estado: ${data.status}`);
             }
 
             setFormData(prev => ({
                 ...prev,
-                name: data.name, // Rellena con Razón Social o Nombre Completo automáticamente
+                name: data.name,
                 address: data.address || prev.address
             }));
         } catch (error) {
-            alert("No se encontraron datos.");
+            console.error(error);
+            alert("No se encontraron datos del proveedor");
         } finally {
             setSearching(false);
         }
@@ -63,19 +50,13 @@ export const CreateCustomerModal = ({ onClose, onSuccess, customerToEdit }: Prop
         e.preventDefault();
         setLoading(true);
         try {
-            let result;
-            if (customerToEdit) {
-                result = await updateCustomer(customerToEdit.id, formData);
-                alert("Cliente actualizado correctamente");
-            } else {
-                result = await createCustomer(formData);
-                alert("Cliente registrado correctamente");
-            }
+            const result = await createSupplier(formData);
+            alert("Proveedor registrado exitosamente");
             onSuccess(result);
             onClose();
         } catch (error) {
             console.error(error);
-            alert("Error al guardar cliente");
+            alert("Error al guardar proveedor");
         } finally {
             setLoading(false);
         }
@@ -86,32 +67,32 @@ export const CreateCustomerModal = ({ onClose, onSuccess, customerToEdit }: Prop
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
                 <div className="p-4 bg-slate-900 text-white flex justify-between items-center">
                     <h2 className="font-bold flex items-center gap-2">
-                        <User size={20} /> {customerToEdit ? 'Editar Cliente' : 'Nuevo Cliente'}
+                        <Truck size={20} /> Nuevo Proveedor
                     </h2>
                     <button onClick={onClose}><X size={20} /></button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
 
-                    {/* CAMPO DNI/RUC CON BOTÓN DE BÚSQUEDA */}
+                    {/* RUC + BUSCADOR */}
                     <div>
-                        <label className="text-xs font-bold text-slate-500">DNI / RUC</label>
+                        <label className="text-xs font-bold text-slate-500">RUC / DNI</label>
                         <div className="flex gap-2">
                             <input
                                 required
                                 type="text"
                                 maxLength={11}
                                 className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                                value={formData.docNumber}
-                                onChange={e => setFormData({ ...formData, docNumber: e.target.value })}
-                                placeholder="Ingresa documento..."
+                                value={formData.ruc}
+                                onChange={e => setFormData({ ...formData, ruc: e.target.value })}
+                                placeholder="Ingresa RUC..."
                             />
                             <button
                                 type="button"
                                 onClick={handleSearchDoc}
-                                disabled={searching || !!customerToEdit} // Deshabilitar si edita o busca
+                                disabled={searching}
                                 className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded transition disabled:opacity-50"
-                                title="Consultar Reniec/Sunat"
+                                title="Consultar SUNAT"
                             >
                                 {searching ? <Loader2 size={20} className="animate-spin" /> : <Search size={20} />}
                             </button>
@@ -119,7 +100,7 @@ export const CreateCustomerModal = ({ onClose, onSuccess, customerToEdit }: Prop
                     </div>
 
                     <div>
-                        <label className="text-xs font-bold text-slate-500">Nombre / Razón Social</label>
+                        <label className="text-xs font-bold text-slate-500">Razón Social</label>
                         <input
                             required
                             type="text"
@@ -166,7 +147,7 @@ export const CreateCustomerModal = ({ onClose, onSuccess, customerToEdit }: Prop
                             disabled={loading}
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg flex justify-center gap-2 transition"
                         >
-                            <Save size={20} /> {loading ? 'Guardando...' : 'GUARDAR DATOS'}
+                            <Save size={20} /> {loading ? 'Guardando...' : 'GUARDAR PROVEEDOR'}
                         </button>
                     </div>
                 </form>

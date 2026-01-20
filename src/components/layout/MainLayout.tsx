@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, PackagePlus, LogOut, Menu, PackageSearch, ShoppingBag, X } from 'lucide-react';
+import { LayoutDashboard, ShoppingCart, PackagePlus, LogOut, Menu, PackageSearch, ShoppingBag, X, Users } from 'lucide-react';
 import { useState } from 'react';
 
 export const MainLayout = () => {
@@ -67,6 +67,7 @@ export const MainLayout = () => {
                         <ShoppingCart size={20} />
                         Nueva Venta
                     </NavLink>
+                    {/* Historial de Ventas */}
                     <NavLink
                         to="/sales/history"
                         onClick={() => setIsMobileMenuOpen(false)}
@@ -77,7 +78,7 @@ export const MainLayout = () => {
                         <ShoppingBag size={20} />
                         Historial Ventas
                     </NavLink>
-
+                    {/* Ingreso Stock */}
                     <NavLink
                         to="/inventory"
                         onClick={() => setIsMobileMenuOpen(false)}
@@ -88,6 +89,7 @@ export const MainLayout = () => {
                         <PackagePlus size={20} />
                         Ingreso Stock
                     </NavLink>
+                    {/* Catálogo */}
                     <NavLink
                         to="/catalog"
                         onClick={() => setIsMobileMenuOpen(false)}
@@ -96,6 +98,7 @@ export const MainLayout = () => {
                         <PackageSearch size={20} />
                         Catálogo
                     </NavLink>
+                    {/* Cotizaciones */}
                     <NavLink
                         to="/quotes"
                         onClick={() => setIsMobileMenuOpen(false)}
@@ -103,6 +106,17 @@ export const MainLayout = () => {
                             `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`}>
                         <PackageSearch size={20} />
                         Cotizaciones
+                    </NavLink>
+                    {/* Clientes */}
+                    <NavLink
+                        to="/customers"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={({ isActive }) =>
+                            `flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'}`
+                        }
+                    >
+                        <Users size={20} />
+                        Clientes
                     </NavLink>
                 </nav>
 

@@ -14,3 +14,10 @@ export interface CreateCustomerRequest {
     phone?: string;
     address?: string;
 }
+export interface ExternalCustomer {
+    docNumber: string;
+    name: string;
+    address?: string;
+    status?: string;
+    condition?: string;
+}

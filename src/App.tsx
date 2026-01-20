@@ -8,6 +8,7 @@ import { SalesHistoryPage } from './features/sales/SalesHistoryPage';
 import { InventoryPage } from './features/inventory/InventoryPage';
 import { ProductListPage } from './features/catalog/ProductListPage';
 import { QuotesPage } from './features/sales/QuotesPage';
+import { CustomersPage } from './features/customers/CustomerPage';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/catalog" element={<ProductListPage />} />
             <Route path="/quotes" element={<QuotesPage />} />
+            <Route path="/customers" element={<CustomersPage />} />
           </Route>
         </Route>
 

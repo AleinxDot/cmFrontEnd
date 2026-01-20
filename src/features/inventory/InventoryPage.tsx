@@ -1,13 +1,17 @@
-import { useState } from 'react';
-import { Plus, Save, Search, Trash2, PackagePlus, FileText, Camera } from 'lucide-react'; // 1. Importamos Camera
+import { useEffect, useState } from 'react';
+import { Plus, Save, Search, Trash2, PackagePlus, FileText, Camera, Truck } from 'lucide-react'; // 1. Importamos Camera
 import { searchProducts, createStockEntry } from './inventoryService';
 import type { StockEntryItem } from './types';
-import { BarcodeScanner } from '../../components/ui/BarcodeScanner'; // 2. Importamos el Escáner
+import { BarcodeScanner } from '../../components/ui/BarcodeScanner';
+import { getSuppliers, createSupplier } from './supplierService';
+import type { Supplier } from './types';
+import { CreateSupplierModal } from './CreateSupplierModal';
 
 export const InventoryPage = () => {
     // Estado del Formulario Cabecera
     const [reference, setReference] = useState('');
     const [comments, setComments] = useState('');
+    const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
 
     // Estado del Buscador y Producto actual
     const [searchTerm, setSearchTerm] = useState('');
@@ -24,7 +28,34 @@ export const InventoryPage = () => {
 
     // Estado para el Escáner
     const [isScannerOpen, setIsScannerOpen] = useState(false); // 3. Nuevo estado
+    // --- NUEVO: Estado para Proveedores ---
+    const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+    const [selectedSupplierId, setSelectedSupplierId] = useState<number | ''>('');
 
+
+    // Cargar proveedores al inicio
+    useEffect(() => {
+        loadSuppliers();
+    }, []);
+
+    const loadSuppliers = async () => {
+        try {
+            const data = await getSuppliers();
+            setSuppliers(data);
+        } catch (error) {
+            console.error("Error cargando proveedores", error);
+        }
+    };
+
+    // Función rápida para crear proveedor (Podrías hacer un modal más complejo)
+    const handleQuickCreateSupplier = () => {
+        setIsSupplierModalOpen(true);
+    };
+    const handleSupplierCreated = (newSupplier: any) => {
+        setSuppliers([...suppliers, newSupplier]); // Agregarlo a la lista
+        setSelectedSupplierId(newSupplier.id);      // Seleccionarlo
+        // El modal se cierra solo en el componente
+    };
     // --- MANEJADORES ---
 
     const handleSearch = async (val: string) => {
@@ -103,20 +134,21 @@ export const InventoryPage = () => {
             await createStockEntry({
                 reference,
                 comments,
+                supplierId: selectedSupplierId ? Number(selectedSupplierId) : null, // <--- ENVIAR ID
                 items: items.map(i => ({
                     productId: i.productId,
                     quantity: i.quantity,
                     unitCost: i.unitCost
                 }))
             });
-            alert("Ingreso de Stock registrado correctamente");
-            // Limpiar todo
+            alert("Ingreso registrado correctamente");
             setItems([]);
             setReference('');
             setComments('');
+            setSelectedSupplierId(''); // Resetear proveedor
         } catch (error) {
             console.error(error);
-            alert("Error al registrar el ingreso");
+            alert("Error al registrar");
         } finally {
             setLoading(false);
         }
@@ -129,9 +161,38 @@ export const InventoryPage = () => {
             </h1>
 
             {/* SECCIÓN 1: DATOS DEL DOCUMENTO */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                {/* Selector de Proveedor */}
+                <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Proveedor</label>
+                    <div className="flex gap-2">
+                        <div className="relative flex-1">
+                            <Truck className="absolute left-3 top-2.5 text-slate-400" size={18} />
+                            <select
+                                className="pl-10 w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                                value={selectedSupplierId}
+                                onChange={e => setSelectedSupplierId(Number(e.target.value))}
+                            >
+                                <option value="">-- Seleccionar --</option>
+                                {suppliers.map(s => (
+                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        {/* BOTÓN + */}
+                        <button
+                            onClick={handleQuickCreateSupplier}
+                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 p-2 rounded-lg border border-slate-300"
+                            title="Crear Proveedor Rápido"
+                        >
+                            <Plus size={20} />
+                        </button>
+                    </div>
+                </div>
+
                 <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Documento de Referencia</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Documento Ref.</label>
                     <div className="relative">
                         <FileText className="absolute left-3 top-2.5 text-slate-400" size={18} />
                         <input
@@ -147,7 +208,7 @@ export const InventoryPage = () => {
                     <label className="block text-sm font-medium text-slate-700 mb-1">Comentarios</label>
                     <input
                         type="text"
-                        placeholder="Ej: Compra mensual a Bosch"
+                        placeholder="Nota interna..."
                         className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                         value={comments}
                         onChange={e => setComments(e.target.value)}
@@ -320,11 +381,18 @@ export const InventoryPage = () => {
                 </button>
             </div>
 
-            {/* 5. Renderizado del Componente Escáner */}
+            {/* Renderizado del Componente Escáner */}
             {isScannerOpen && (
                 <BarcodeScanner
                     onScanSuccess={handleScan}
                     onClose={() => setIsScannerOpen(false)}
+                />
+            )}
+            {/* RENDERIZAR EL MODAL AL FINAL */}
+            {isSupplierModalOpen && (
+                <CreateSupplierModal
+                    onClose={() => setIsSupplierModalOpen(false)}
+                    onSuccess={handleSupplierCreated}
                 />
             )}
         </div>
