@@ -3,8 +3,9 @@ import { Plus, Save, Search, Trash2, PackagePlus, FileText, Camera, Truck } from
 import { searchProducts, createStockEntry } from './inventoryService';
 import type { StockEntryItem } from './types';
 import { BarcodeScanner } from '../../components/ui/BarcodeScanner';
-import { getSuppliers, createSupplier } from './supplierService';
+import { getSuppliers } from './supplierService';
 import type { Supplier } from './types';
+
 import { CreateSupplierModal } from './CreateSupplierModal';
 
 export const InventoryPage = () => {
