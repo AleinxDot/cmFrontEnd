@@ -65,3 +65,18 @@ export const getSalesHistory = async () => {
     const response = await client.get<any[]>('/sales/history');
     return response.data;
 };
+
+// Subir XML SUNAT
+export const uploadSunatXml = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // Sobreescribir el Content-Type por defecto ('application/json') del client
+    // para que Axios envíe correctamente como multipart/form-data con el boundary
+    const response = await client.post('/sales/upload-sunat-xml', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    });
+    return response.data;
+};

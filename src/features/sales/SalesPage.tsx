@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Trash2, ShoppingCart, Plus, Minus, CreditCard, CheckCircle, User, UserPlus, X, FileText, ScanLine } from 'lucide-react';
-import { searchProducts, createSale } from './salesService';
+import { Search, Trash2, ShoppingCart, Plus, Minus, CreditCard, CheckCircle, User, UserPlus, X, FileText, ScanLine, UploadCloud } from 'lucide-react';
+import { searchProducts, createSale, uploadSunatXml } from './salesService';
 import { searchCustomers } from '../customers/customerService';
 import { CreateCustomerModal } from '../customers/CreateCustomerModal';
 import type { CartItem, Product } from './types';
@@ -23,6 +23,27 @@ export const SalesPage = () => {
     const [isScannerOpen, setIsScannerOpen] = useState(false);
     // Referencia para mantener el foco en el buscador (para escanear seguido)
     const searchInputRef = useRef<HTMLInputElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // --- LÓGICA DE XML ---
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        setLoading(true);
+        try {
+            const response = await uploadSunatXml(file);
+            // El backend podría devolver un ID u otro identificador
+            setSuccessId(response.documentNumber || "XML de SUNAT procesado correctamente");
+        } catch (error: any) {
+            console.error("Error subiendo XML", error);
+            const backendMsg = error.response?.data?.message || error.response?.data || "";
+            alert(`Error al procesar el archivo XML. ${typeof backendMsg === 'string' ? backendMsg : ''}`);
+        } finally {
+            setLoading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
 
 
     // Enfocar el input al cargar la página
@@ -371,6 +392,26 @@ export const SalesPage = () => {
                             </>
                         )}
                     </button>
+
+                    <div className="mt-3 pt-3 border-t border-slate-200">
+                        <input 
+                            type="file" 
+                            accept=".xml" 
+                            ref={fileInputRef} 
+                            className="hidden" 
+                            onChange={handleFileUpload} 
+                        />
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={loading}
+                            title="Generar venta y actualizar stock subiendo el XML de SUNAT"
+                            className={`w-full py-2 px-4 rounded-xl flex items-center justify-center gap-2 font-bold transition shadow-sm border border-slate-300
+                                ${loading ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-white text-slate-700 hover:bg-slate-50 active:scale-95'}`}
+                        >
+                            <UploadCloud size={20} />
+                            SUBIR XML SUNAT
+                        </button>
+                    </div>
                 </div>
             </div>
             {/* Modal de nuevo cliente */}
